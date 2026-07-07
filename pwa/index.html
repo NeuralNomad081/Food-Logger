@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Food Logger</title>
+  <meta name="description" content="Log meals with photos and tags">
+  <meta name="theme-color" content="#16a34a">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Food Logger">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>🍽️ Food Logger</h1>
+    <div class="header-actions">
+      <button id="export-btn" class="icon-btn" title="Export data" aria-label="Export data" hidden>⬇︎</button>
+      <button id="signout-btn" class="icon-btn" title="Sign out" aria-label="Sign out" hidden>⎋</button>
+    </div>
+  </header>
+
+  <!-- Shown when config.js still has placeholders -->
+  <main id="setup-view" class="center-view" hidden>
+    <div class="auth-card">
+      <div class="empty-emoji">🛠️</div>
+      <h2>Almost there</h2>
+      <p class="muted">Supabase isn't configured yet. Fill in <code>config.js</code> with your project URL and anon key, then reload. See README for full setup.</p>
+    </div>
+  </main>
+
+  <!-- Sign in -->
+  <main id="auth-view" class="center-view" hidden>
+    <div class="auth-card">
+      <div class="empty-emoji">🍽️</div>
+      <h2>Food Logger</h2>
+      <p class="muted">Sign in with your email — no password needed.</p>
+      <form id="auth-form">
+        <input id="auth-email" type="email" placeholder="you@example.com" required
+               autocomplete="email" inputmode="email">
+        <button type="submit" class="primary-btn" id="auth-send">Send login link</button>
+      </form>
+      <form id="otp-form" hidden>
+        <p class="muted">Link sent ✓ — tap it on this device, or enter the 6-digit code from the email:</p>
+        <input id="otp-code" type="text" placeholder="123456" inputmode="numeric"
+               autocomplete="one-time-code" maxlength="6">
+        <button type="submit" class="primary-btn">Verify code</button>
+      </form>
+      <p id="auth-status" class="auth-status" hidden></p>
+    </div>
+  </main>
+
+  <main id="log-view" class="log-view" hidden>
+    <div id="entries-list"></div>
+    <div id="empty-state" class="empty-state" hidden>
+      <div class="empty-emoji">📸</div>
+      <p>No meals logged yet.</p>
+      <p class="muted">Tap the camera button to snap your first meal.</p>
+    </div>
+  </main>
+
+  <button id="add-btn" class="fab" aria-label="Log a meal" hidden>📷</button>
+  <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+  <input type="file" id="gallery-input" accept="image/*" hidden>
+
+  <!-- Capture source chooser -->
+  <div id="source-sheet" class="sheet-backdrop" hidden>
+    <div class="sheet">
+      <button class="sheet-option" id="source-camera">📷 Take photo</button>
+      <button class="sheet-option" id="source-gallery">🖼️ Choose from gallery</button>
+      <button class="sheet-option cancel" id="source-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Tag editor (new entry + edit existing) -->
+  <div id="editor" class="editor" hidden>
+    <header class="editor-header">
+      <button id="editor-cancel" class="text-btn">Cancel</button>
+      <h2 id="editor-title">New Meal</h2>
+      <button id="editor-save" class="text-btn primary">Save</button>
+    </header>
+
+    <div class="editor-body">
+      <div class="preview-wrap">
+        <img id="editor-preview" alt="Meal photo preview">
+      </div>
+
+      <label class="field-label">Meal</label>
+      <div class="segmented" id="meal-type" role="radiogroup">
+        <button data-meal="breakfast">🌅 Breakfast</button>
+        <button data-meal="lunch">☀️ Lunch</button>
+        <button data-meal="dinner">🌙 Dinner</button>
+        <button data-meal="snack">🍿 Snack</button>
+      </div>
+
+      <label class="field-label" for="tag-input">Tags</label>
+      <div class="tag-box" id="tag-box">
+        <div id="selected-tags" class="selected-tags"></div>
+        <input id="tag-input" type="text" placeholder="e.g. dal, rice, salad…"
+               autocomplete="off" autocapitalize="none" enterkeyhint="done">
+      </div>
+      <div id="tag-suggestions" class="tag-suggestions"></div>
+
+      <label class="field-label" for="note-input">Note <span class="muted">(optional)</span></label>
+      <input id="note-input" type="text" placeholder="Half portion, homemade…" autocomplete="off">
+
+      <label class="field-label" for="time-input">Time</label>
+      <input id="time-input" type="datetime-local">
+
+      <div class="ai-placeholder" id="ai-box">
+        <div id="ai-summary">🤖 Calories &amp; macros: <em>analyzed automatically after saving</em>.</div>
+        <div id="ai-foods" class="ai-foods" hidden></div>
+        <button id="analyze-btn" class="analyze-btn" hidden>🔍 Re-analyze photo</button>
+      </div>
+
+      <button id="editor-delete" class="danger-btn" hidden>Delete entry</button>
+    </div>
+  </div>
+
+  <!-- Full image lightbox -->
+  <div id="lightbox" class="lightbox" hidden>
+    <img id="lightbox-img" alt="Meal photo">
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
