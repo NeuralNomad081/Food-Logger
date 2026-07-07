@@ -12,9 +12,12 @@ Mobile-first PWA: snap a photo of your meal, tag it, and AI estimates calories &
 -   **AI**: Groq — Llama-4 Scout vision for nutrition estimates
 -   Schema: [`supabase/schema.sql`](supabase/schema.sql)
 
-## Legacy
+## Repository layout
 
-`backend/` (FastAPI + EasyOCR + Gemini) and `frontend/` (Next.js) are an earlier prototype, kept for reference; not part of the deployed app.
+-   [`pwa/`](pwa/) — the app: static PWA + `api/analyze` Vercel function
+-   [`supabase/`](supabase/) — database schema and RLS policies
+
+An earlier FastAPI + Next.js prototype was removed; it lives in git history if ever needed.
 
 ## License
 MIT
