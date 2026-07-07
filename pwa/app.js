@@ -159,21 +159,75 @@ function showView(name) {
 
 /* ---------- auth ---------- */
 
+/* Resend cooldown — Supabase enforces 60s between login emails; surface it
+ * instead of letting users trip the rate limiter. Persists across reloads. */
+const RESEND_COOLDOWN_S = 60;
+let cooldownTimer = null;
+
+function cooldownRemaining() {
+  const last = Number(localStorage.getItem('foodlog:lastEmailSent') || 0);
+  return Math.max(0, RESEND_COOLDOWN_S - Math.floor((Date.now() - last) / 1000));
+}
+
+function refreshCooldownUI() {
+  clearInterval(cooldownTimer);
+  const sentBefore = !!localStorage.getItem('foodlog:lastEmailSent');
+  const tick = () => {
+    const left = cooldownRemaining();
+    if (left > 0) {
+      els.authSend.disabled = true;
+      els.authSend.textContent = `Resend in ${left}s`;
+    } else {
+      clearInterval(cooldownTimer);
+      els.authSend.disabled = false;
+      els.authSend.textContent = sentBefore ? 'Resend login link' : 'Send login link';
+    }
+  };
+  tick();
+  if (cooldownRemaining() > 0) cooldownTimer = setInterval(tick, 1000);
+}
+
+function restoreAuthFormState() {
+  const lastEmail = localStorage.getItem('foodlog:lastEmail');
+  const sentRecently = Date.now() - Number(localStorage.getItem('foodlog:lastEmailSent') || 0) < 3600000;
+  if (lastEmail && sentRecently) {
+    els.authEmail.value = lastEmail;
+    els.otpForm.hidden = false; // code from the last email is still valid
+  }
+  refreshCooldownUI();
+}
+
+function friendlyAuthError(err) {
+  const msg = err.message || String(err);
+  if (/rate limit/i.test(msg)) {
+    return 'Email rate limit reached — Supabase\'s built-in mailer allows only a few emails per hour. '
+      + 'A code from an earlier email still works for 1 hour. '
+      + 'For reliable delivery, set up custom SMTP (see README).';
+  }
+  if (/security purposes/i.test(msg)) {
+    return 'Please wait a minute before requesting another email.';
+  }
+  return msg;
+}
+
 els.authForm.addEventListener('submit', async e => {
   e.preventDefault();
   const email = els.authEmail.value.trim();
-  if (!email) return;
+  if (!email || cooldownRemaining() > 0) return;
   els.authSend.disabled = true;
   els.authStatus.hidden = true;
   try {
     await FoodAPI.sendLoginEmail(email);
+    localStorage.setItem('foodlog:lastEmailSent', String(Date.now()));
+    localStorage.setItem('foodlog:lastEmail', email);
     els.otpForm.hidden = false;
     els.otpCode.focus();
   } catch (err) {
-    els.authStatus.textContent = err.message;
+    log.error('sendLoginEmail:', err);
+    els.authStatus.textContent = friendlyAuthError(err);
     els.authStatus.hidden = false;
   } finally {
-    els.authSend.disabled = false;
+    refreshCooldownUI();
   }
 });
 
@@ -183,9 +237,13 @@ els.otpForm.addEventListener('submit', async e => {
   if (code.length < 6) return;
   try {
     await FoodAPI.verifyCode(els.authEmail.value.trim(), code);
+    localStorage.removeItem('foodlog:lastEmailSent');
     // onAuthChange takes it from here.
   } catch (err) {
-    els.authStatus.textContent = err.message;
+    log.error('verifyCode:', err);
+    els.authStatus.textContent = /expired|invalid/i.test(err.message)
+      ? 'Code invalid or expired — request a new one.'
+      : err.message;
     els.authStatus.hidden = false;
   }
 });
@@ -635,7 +693,7 @@ async function init() {
       renderLog();
     } else if (!s) {
       showView('auth');
-      els.otpForm.hidden = true;
+      restoreAuthFormState();
     }
   });
   if (session) {
@@ -643,6 +701,7 @@ async function init() {
     renderLog();
   } else {
     showView('auth');
+    restoreAuthFormState();
   }
 }
 

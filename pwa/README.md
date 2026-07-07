@@ -22,6 +22,21 @@ All user data isolated per account via Row Level Security; images in per-user st
    ```
 5. **Project Settings → API**: copy **Project URL** and **anon public** key.
 
+### 1b. Email delivery — IMPORTANT
+
+Supabase's built-in mailer is for development only: **hard cap of a few emails per hour**, delivery is slow and often lands in spam. If sign-in emails don't arrive or you see "email rate limit exceeded", this is why.
+
+Fix for production (5 min, free): use [Resend](https://resend.com) (3k emails/month free) or any SMTP provider.
+
+1. Resend → create API key.
+2. Supabase → **Project Settings → Authentication → SMTP Settings** → Enable custom SMTP:
+   - Host: `smtp.resend.com`, Port: `465`
+   - Username: `resend`, Password: your Resend API key
+   - Sender: an address on a domain you verified in Resend (or `onboarding@resend.dev` for testing)
+3. Supabase → **Authentication → Rate Limits** → raise "emails per hour" (only editable with custom SMTP on).
+
+Notes: Supabase also enforces 60 s between emails to the same address (the app shows a resend countdown for this). A login code stays valid for 1 hour — an old email's code still works even if a resend is blocked.
+
 ### 2. Configure frontend
 
 Edit [`config.js`](config.js) — paste Project URL + anon key. These are public-safe values (RLS protects data).
