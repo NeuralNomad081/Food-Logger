@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlmodel
+psycopg2-binary
+pydantic-settings
+python-multipart
+google-generativeai
+easyocr
+pillow
+numpy
+python-dotenv
+alembic
