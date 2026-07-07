@@ -1,6 +1,9 @@
 /* Food Logger — main app logic (Supabase-backed) */
 import { FoodAPI } from './db.js';
 import { isConfigured } from './config.js';
+import { createLogger } from './logger.js';
+
+const log = createLogger('app');
 
 const $ = id => document.getElementById(id);
 
@@ -132,17 +135,20 @@ function scaleToBlob(img, maxSide, quality) {
 }
 
 async function processFile(file) {
+  log.info(`processing image: ${file.name || 'capture'} ${Math.round(file.size / 1024)}KB`);
   const img = await loadImage(file);
   const [imageBlob, thumbBlob] = await Promise.all([
     scaleToBlob(img, 1280, 0.82), // full image — sent to Groq vision
     scaleToBlob(img, 200, 0.7),   // list thumbnail
   ]);
+  log.debug(`resized ${img.naturalWidth}x${img.naturalHeight} → ${Math.round(imageBlob.size / 1024)}KB + ${Math.round(thumbBlob.size / 1024)}KB thumb`);
   return { imageBlob, thumbBlob };
 }
 
 /* ---------- view switching ---------- */
 
 function showView(name) {
+  log.debug('view:', name);
   els.setupView.hidden = name !== 'setup';
   els.authView.hidden = name !== 'auth';
   els.logView.hidden = name !== 'log';
@@ -196,7 +202,7 @@ async function renderLog() {
   try {
     entries = await FoodAPI.listEntries();
   } catch (err) {
-    console.error(err);
+    log.error(err);
     toast('Could not load entries — check connection');
     return;
   }
@@ -330,7 +336,7 @@ async function onFilePicked(input) {
     const { imageBlob, thumbBlob } = await processFile(file);
     openEditor('new', null, { imageBlob, thumbBlob });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     toast('Could not read that image');
   }
 }
@@ -496,7 +502,7 @@ async function runAnalysis(entryId) {
     }
     await renderLog();
   } catch (err) {
-    console.error(err);
+    log.error(err);
     toast(err.message);
     await renderLog();
   }
@@ -539,7 +545,7 @@ els.editorSave.addEventListener('click', async () => {
     await renderLog();
     if (isNew) runAnalysis(savedId); // fire-and-forget; card updates when done
   } catch (err) {
-    console.error(err);
+    log.error(err);
     toast(`Save failed: ${err.message}`, 4000);
   } finally {
     els.editorSave.disabled = false;
@@ -556,7 +562,7 @@ els.editorDelete.addEventListener('click', async () => {
     toast('Deleted');
     await renderLog();
   } catch (err) {
-    console.error(err);
+    log.error(err);
     toast(`Delete failed: ${err.message}`, 4000);
   }
 });
@@ -605,16 +611,18 @@ function blobToDataUrl(blob) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(err => {
-      console.warn('SW registration failed:', err);
-    });
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => log.info('service worker registered, scope:', reg.scope))
+      .catch(err => log.warn('SW registration failed:', err));
   });
 }
 
 /* ---------- init ---------- */
 
 async function init() {
+  log.info('init — debug logs:', localStorage.getItem('foodlog:debug') === '1' ? 'on' : 'off (enable with ?debug=1)');
   if (!isConfigured()) {
+    log.warn('Supabase not configured — showing setup screen');
     showView('setup');
     return;
   }

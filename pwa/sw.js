@@ -1,6 +1,6 @@
 /* Food Logger service worker — cache-first app shell.
  * Bump CACHE_VERSION on every deploy that changes any shell file. */
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `food-logger-${CACHE_VERSION}`;
 
 const SHELL = [
@@ -10,6 +10,7 @@ const SHELL = [
   'app.js',
   'db.js',
   'config.js',
+  'logger.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -26,6 +27,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
+  console.info(`[sw] activated ${CACHE_NAME}`);
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(

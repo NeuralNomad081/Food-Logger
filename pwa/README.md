@@ -89,6 +89,12 @@ Browser (PWA)
 | `image_path` / `thumb_path` | text | `<user_id>/<id>.jpg` in `meals` bucket |
 | `analysis` | jsonb | `{status}` → `{status:'done', calories, protein_g, carbs_g, fat_g, foods[], confidence, model, analyzed_at}` |
 
+## Debugging & logs
+
+**Client** ([logger.js](logger.js)): warnings/errors always print to console; verbose logs (API timings, image sizes, auth events) enable with `?debug=1` on the URL or `localStorage.setItem('foodlog:debug', '1')`. Last 300 log lines always buffered — run `__foodlogDump()` in the console to get them as text (works even when debug was off). Uncaught errors and promise rejections are captured too.
+
+**Server** ([api/analyze.js](api/analyze.js)): one JSON line per stage — auth, entry lookup, image download (KB, ms), Groq call (ms, tokens), save — all tied by a `rid` request id. View in Vercel → Project → Logs (filter `/api/analyze`). Error responses include `requestId` so a user report can be matched to server logs.
+
 ## Local development
 
 ```bash
