@@ -26,10 +26,17 @@ function rowToEntry(row) {
 }
 
 function assertOk(error, context) {
-  if (error) {
-    log.error(context || 'supabase error:', error.message || error);
-    throw new Error(error.message || String(error));
+  if (!error) return;
+  // supabase-js 5xx errors arrive as AuthRetryableFetchError with message "{}".
+  let msg = error.message;
+  if (!msg || msg === '{}') {
+    msg = error.code || (error.status ? `Server error (${error.status})` : 'Unknown error');
   }
+  log.error(context || 'supabase error:', msg, error.status ? `status=${error.status}` : '');
+  const err = new Error(msg);
+  err.status = error.status;
+  err.code = error.code;
+  throw err;
 }
 
 export const FoodAPI = {

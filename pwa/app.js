@@ -198,7 +198,15 @@ function restoreAuthFormState() {
 }
 
 function friendlyAuthError(err) {
-  const msg = err.message || String(err);
+  let msg = err?.message;
+  if (!msg || typeof msg !== 'string') {
+    try { msg = JSON.stringify(err); } catch { msg = String(err); }
+  }
+  if (err?.status >= 500 || /sending.*email|unexpected_failure|server error \(5/i.test(msg)) {
+    return 'Supabase could not send the email — its email service is misconfigured. '
+      + 'Project owner: check Project Settings → Authentication → SMTP Settings '
+      + '(sender address must be on a domain verified with your SMTP provider).';
+  }
   if (/rate limit/i.test(msg)) {
     return 'Email rate limit reached — Supabase\'s built-in mailer allows only a few emails per hour. '
       + 'A code from an earlier email still works for 1 hour. '
